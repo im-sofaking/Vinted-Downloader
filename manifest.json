@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Vinted Downloader",
+  "version": "1.0",
+  "description": "Download Vinted items and profiles",
+  
+  "icons": {
+    "48": "icon48.png"
+  },
+  
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.vinted.it/*",
+    "https://www.vinted.com/*"
+  ],  
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "service-worker.js"
+  }
+}

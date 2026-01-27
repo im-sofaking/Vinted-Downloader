@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌟 Vinted Downloader 🌟</title>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      min-height: 250px;
+    }
+    
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    h3 {
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .scrape-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      width: 100%;
+    }
+
+    .scrape-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .scrape-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    
+    #scrapeThisPage {
+      background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+      color: white;
+    }
+    
+    #scrapeThisPage:hover {
+      background: linear-gradient(135deg, #45a049 0%, #1B5E20 100%);
+      box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+    }
+    
+    #scrapeProfile {
+      background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+      color: white;
+    }
+    
+    #scrapeProfile:hover {
+      background: linear-gradient(135deg, #1E88E5 0%, #0A2E6E 100%);
+      box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+    }
+    
+    #stopScraping {
+      background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+      color: white;
+      display: none; /* Hidden by default */
+    }
+    
+    #stopScraping:hover {
+      background: linear-gradient(135deg, #ff3333 0%, #aa0000 100%);
+      box-shadow: 0 8px 20px rgba(255, 68, 68, 0.3);
+    }
+    
+    .btn-icon {
+      font-size: 20px;
+    }
+    
+    .btn-text {
+      flex-grow: 1;
+      text-align: center;
+      font-family: Copperplate, "Copperplate Gothic Light", fantasy;
+    }
+    
+    #status {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 15px;
+      color: #333;
+      min-height: 80px;
+    }
+    
+    .progress-container {
+      margin-top: 10px;
+      background: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 8px;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    
+    .progress-text {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 5px;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .stat-value {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .instructions {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 15px;
+      line-height: 1.4;
+      padding: 10px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    
+    .powered-by {
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>🌟 Vinted Downloader 🌟</h3>
+    
+    <div class="button-group">
+      <button id="scrapeThisPage" class="scrape-btn">
+        <span class="btn-icon">📦</span>
+        <span class="btn-text">Download Current Item</span>
+      </button>
+      
+      <button id="scrapeProfile" class="scrape-btn">
+        <span class="btn-icon">👤</span>
+        <span class="btn-text">Download Entire Profile</span>
+      </button>
+      
+      <button id="stopScraping" class="scrape-btn">
+        <span class="btn-icon">⛔️</span>
+        <span class="btn-text">Stop Download</span>
+      </button>
+    </div>
+    
+    <div id="status">
+      <div id="statusText">
+        <span class="status-icon">🌟</span>
+        Ready to download. Make sure you're on a Vinted page.
+      </div>
+      
+      <div class="progress-container" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      
+      <div class="progress-text" id="progressText"></div>
+      
+      <div class="stats" id="statsDisplay" style="display: none;">
+        <div class="stat-item">
+          <span>✅ Completed</span>
+          <span class="stat-value" id="completedCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span>⏳ Processing</span>
+          <span class="stat-value" id="currentItem">-</span>
+        </div>
+        <div class="stat-item">
+          <span>❌ Failed</span>
+          <span class="stat-value" id="failedCount">0</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="instructions">
+      <strong>💡 Quick Guide:</strong><br>
+      • <strong>Download Item 📦</strong>: Just go on the item's page and click the button to download all the images and the item informations<br>
+      • <strong>Download Entire Profile 👤</strong>: Just go on the user's profile page and click the Download Entire Profile button to download all the items<br>
+      • <strong>Download folder 📥</strong>: You will find your downloads in the Downloads folder of your computer.<br>
+    </div>
+    
+    <div class="powered-by">
+      Vinted Downloader Extension v1.0
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
