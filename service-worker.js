@@ -630,52 +630,9 @@ function scrapeAllProfileItems(profileData) {
 
 // ===== YOUR EXISTING FUNCTIONS (KEEP AS-IS) =====
 function scrapeVintedItem() {
-  console.log("==== SCRAPING VINTED ITEM ====");
-  
-  // Get title
-  var itemTitle = '';
-  var titleEl = document.querySelector("h1[data-testid*='item-title'], h1");
-  if (titleEl) itemTitle = titleEl.innerText.trim();
-  
-  // Get price
-  var itemPrice = '';
-  var priceEl = document.querySelector("[data-testid*='item-price'], [class*='price']");
-  if (priceEl) itemPrice = priceEl.innerText.trim();
-  
-  // Get description
-  var itemDescription = '';
-  var descEl = document.querySelector("[itemprop='description'], .description");
-  if (descEl) itemDescription = descEl.innerText.trim();
-  
-  // Get size
-  var itemSize = '';
-  var sizeEl = document.querySelector("[itemprop='size'], .size");
-  if (sizeEl) itemSize = sizeEl.innerText.trim();
-  
-  // Get condition
-  var itemCondition = '';
-  var conditionEl = document.querySelector("[itemprop='status'], .condition");
-  if (conditionEl) itemCondition = conditionEl.innerText.trim();
-  
-  // Get color
-  var itemColor = '';
-  var colorEl = document.querySelector("[itemprop='color'], .color");
-  if (colorEl) itemColor = colorEl.innerText.trim();
-  
-  // Get images
-  var imageUrls = [];
-  var imageElements = document.querySelectorAll('[data-testid^="item-photo-"] img');
-  
-  for (var i = 0; i < imageElements.length; i++) {
-    var src = imageElements[i].src;
-    if (src && src.includes('vinted.net') && !imageUrls.includes(src)) {
-      imageUrls.push(src);
-    }
-  }
-  
-  console.log("Found:", itemTitle, "-", imageUrls.length, "images");
-  
-  // Sanitize folder name
+  console.log("==== [1] scrapeVintedItem STARTED ====");
+
+  // Helper function for profile sanitization
   function sanitizeFilename(name) {
     if (!name) return 'vinted_item';
     return name
@@ -683,75 +640,328 @@ function scrapeVintedItem() {
       .replace(/\s+/g, '_')
       .replace(/_{2,}/g, '_')
       .trim()
-      .substring(0, 50);
+      .substring(0, 40);
   }
   
-  var folderName = sanitizeFilename(itemTitle || 'vinted_item');
-  
-  // Create info.txt content
-  var infoContent = 
-`VINTED ITEM INFORMATION
-=======================
-
-Title: ${itemTitle || 'N/A'}
-Price: ${itemPrice || 'N/A'}
-Size: ${itemSize || 'N/A'}
-Condition: ${itemCondition || 'N/A'}
-Color: ${itemColor || 'N/A'}
-
-DESCRIPTION:
-${itemDescription || 'No description available'}`;
-
-  
-  // Show success message
-  var message = "✅ " + (itemTitle || 'Item') + 
-                "\n💰 " + (itemPrice || 'N/A') + 
-                "\n📸 " + imageUrls.length + " images" +
-                "\n\nDownloading to folder: " + folderName;
-  
-  alert(message);
-  
-  // Return data to service worker
-  return {
-    title: itemTitle,
-    price: itemPrice,
-    description: itemDescription,
-    size: itemSize,
-    condition: itemCondition,
-    color: itemColor,
-    images: imageUrls,
-    folderName: folderName,
-    infoContent: infoContent,
-    url: window.location.href
-  };
+  try {
+    // Helper: pulisci prezzo
+    function parsePrice(priceStr) {
+      console.log("[parsePrice] Input:", priceStr);
+      if (!priceStr) return 0;
+      var match = priceStr.match(/(\d+)[,.]?(\d+)?/);
+      if (match) return parseInt(match[1]);
+      return 0;
+    }
+    
+    // Helper: estrai ID da URL
+    function extractIdFromUrl(url, pattern) {
+      var match = url.match(pattern);
+      return match ? match[1] : null;
+    }
+    
+    console.log("[2] Getting basic data...");
+    
+    // ===== 1. DATI BASE =====
+    var url = window.location.href;
+    console.log("[3] URL:", url);
+    
+    var itemId = extractIdFromUrl(url, /\/items\/(\d+)/);
+    console.log("[4] Item ID:", itemId);
+    
+    // Titolo
+    var title = '';
+    var titleEl = document.querySelector("h1[data-testid*='item-title'], h1");
+    if (titleEl) title = titleEl.innerText.trim();
+    console.log("[5] Title:", title);
+    
+    // Prezzo
+    var price = 0;
+    var priceEl = document.querySelector("[data-testid*='item-price']");
+    if (priceEl) price = parsePrice(priceEl.innerText.trim());
+    console.log("[6] Price:", price);
+    
+    // Descrizione
+    var description = '';
+    var descEl = document.querySelector("[itemprop='description'], .description, [data-testid*='description']");
+    if (descEl) description = descEl.innerText.trim();
+    console.log("[7] Description length:", description.length);
+    
+    console.log("[8] Getting brand...");
+    
+    // ===== 2. BRAND =====
+    var brandId = null;
+    var brandName = '';
+    
+    var brandLink = document.querySelector("a[href*='/brands/']");
+    if (brandLink) {
+      brandName = brandLink.innerText.trim();
+      var brandMatch = brandLink.href.match(/\/brands\/(\d+)/);
+      if (brandMatch) brandId = parseInt(brandMatch[1]);
+    }
+    
+    if (!brandName) {
+      var brandSpan = document.querySelector("[data-testid*='brand'], .brand-name");
+      if (brandSpan) brandName = brandSpan.innerText.trim();
+    }
+    console.log("[9] Brand:", brandName, "ID:", brandId);
+    
+    console.log("[10] Getting size...");
+    
+    // ===== 3. SIZE =====
+    var sizeId = null;
+    var sizeName = '';
+    
+    var sizeEl = document.querySelector("[data-testid*='size'], .size-selector__selected");
+    if (sizeEl) {
+      sizeName = sizeEl.innerText.trim();
+    }
+    
+    if (!sizeId) {
+      var sizeOption = document.querySelector('select[name="size_id"] option:checked');
+      if (sizeOption) {
+        sizeId = parseInt(sizeOption.value);
+        sizeName = sizeOption.innerText.trim();
+      }
+    }
+    console.log("[11] Size:", sizeName, "ID:", sizeId);
+    
+    console.log("[12] Getting condition...");
+    
+    // ===== 4. CONDITION =====
+    var conditionId = null;
+    var conditionName = '';
+    
+    var conditionMap = {
+      'Nuovo con tag': 1, 'Nuovo senza tag': 1, 'Nuovo': 1,
+      'Ottime': 2, 'Ottimo': 2,
+      'Buone': 3, 'Buono': 3,
+      'Discrete': 4, 'Discreto': 4,
+      'Mediocre': 5
+    };
+    
+    var conditionEl = document.querySelector("[data-testid*='condition'], .condition");
+    if (conditionEl) {
+      conditionName = conditionEl.innerText.trim();
+      conditionId = conditionMap[conditionName] || 3;
+    }
+    console.log("[13] Condition:", conditionName, "ID:", conditionId);
+    
+    console.log("[14] Getting color...");
+    
+    // ===== 5. COLOR =====
+    var colorIds = [];
+    var colorNames = [];
+    
+    var colorMap = {
+      'Nero': 1, 'Black': 1,
+      'Bianco': 2, 'White': 2,
+      'Grigio': 3, 'Gray': 3,
+      'Blu': 4, 'Blue': 4,
+      'Rosso': 5, 'Red': 5,
+      'Verde': 6, 'Green': 6,
+      'Giallo': 7, 'Yellow': 7,
+      'Marrone': 8, 'Brown': 8,
+      'Rosa': 9, 'Pink': 9,
+      'Viola': 10, 'Purple': 10,
+      'Arancione': 11, 'Orange': 11,
+      'Beige': 12,
+      'Oro': 13, 'Gold': 13,
+      'Argento': 14, 'Silver': 14,
+      'Multicolore': 15, 'Multicolor': 15
+    };
+    
+    var colorEl = document.querySelector("[data-testid*='color'], .color");
+    if (colorEl) {
+      var colorText = colorEl.innerText.trim();
+      var colorParts = colorText.split(/[,&]/);
+      for (var i = 0; i < colorParts.length; i++) {
+        var part = colorParts[i].trim();
+        if (colorMap[part]) {
+          colorIds.push(colorMap[part]);
+          colorNames.push(part);
+        }
+      }
+    }
+    
+    if (colorIds.length === 0 && colorEl) {
+      colorIds = [1];
+      colorNames = [colorEl.innerText.trim()];
+    }
+    console.log("[15] Colors:", colorNames, "IDs:", colorIds);
+    
+    console.log("[16] Getting catalog ID...");
+    
+    // ===== 6. CATALOG ID (categoria) =====
+    var catalogId = null;
+    
+    var catalogElement = document.querySelector('[data-catalog-id]');
+    if (catalogElement) {
+      catalogId = parseInt(catalogElement.getAttribute('data-catalog-id'));
+    }
+    
+    if (!catalogId) {
+      var breadcrumbLinks = document.querySelectorAll('.breadcrumb a, [data-testid*="breadcrumb"] a');
+      console.log("[17] Breadcrumb links found:", breadcrumbLinks.length);
+      for (var i = 0; i < breadcrumbLinks.length; i++) {
+        var link = breadcrumbLinks[i];
+        var catMatch = link.href.match(/\/catalog\/(\d+)/);
+        if (catMatch) {
+          catalogId = parseInt(catMatch[1]);
+          break;
+        }
+      }
+    }
+    console.log("[18] Catalog ID:", catalogId);
+    
+    console.log("[19] Getting package size...");
+    
+    // ===== 7. PACKAGE SIZE =====
+    var packageSizeId = 2;
+    if (catalogId && (catalogId === 100 || catalogId === 101 || catalogId === 120 || catalogId === 130)) {
+      packageSizeId = 1;
+    }
+    if (title && (title.toLowerCase().indexOf('scarpe') !== -1 || title.toLowerCase().indexOf('stivali') !== -1)) {
+      packageSizeId = 2;
+    }
+    if (title && (title.toLowerCase().indexOf('piumino') !== -1 || title.toLowerCase().indexOf('cappotto') !== -1)) {
+      packageSizeId = 3;
+    }
+    console.log("[20] Package size ID:", packageSizeId);
+    
+    console.log("[21] Getting images...");
+    
+    // ===== 8. IMMAGINI =====
+    var imageUrls = [];
+    var imgElements = document.querySelectorAll('[data-testid^="item-photo-"] img, .item-photo img, .carousel img');
+    console.log("[22] Image elements found:", imgElements.length);
+    
+    for (var i = 0; i < imgElements.length; i++) {
+      var src = imgElements[i].src;
+      if (src && src.indexOf('vinted.net') !== -1) {
+        src = src.replace('/320/', '/0/').replace('/426/', '/0/');
+        if (imageUrls.indexOf(src) === -1) {
+          imageUrls.push(src);
+        }
+      }
+    }
+    
+    console.log("[23] Unique image URLs found:", imageUrls.length);
+    
+    console.log("[24] Preparing metadata...");
+    
+    // ===== 9. PREPARA METADATA =====
+    var folderName = sanitizeFilename(title || 'vinted_item');
+    console.log("[25] Folder name:", folderName);
+    
+    var metadata = {
+      original_item_id: itemId,
+      original_url: url,
+      scraped_at: new Date().toISOString(),
+      title: title,
+      price: price,
+      description: description,
+      brand_id: brandId,
+      brand_name: brandName,
+      catalog_id: catalogId,
+      size_id: sizeId,
+      size_name: sizeName,
+      condition_id: conditionId,
+      condition_name: conditionName,
+      color_ids: colorIds,
+      color_names: colorNames,
+      package_size_id: packageSizeId,
+      image_count: imageUrls.length,
+      image_filenames: [],
+      image_urls: imageUrls
+    };
+    console.log("[26] Metadata created successfully");
+    
+    // ===== 10. DESCRIPTION.TXT =====
+    var infoContent = "VINTED ITEM INFORMATION\n" +
+      "=======================\n\n" +
+      "Title: " + (title || 'N/A') + "\n" +
+      "Price: " + price + " €\n" +
+      "Size: " + (sizeName || 'N/A') + "\n" +
+      "Condition: " + (conditionName || 'N/A') + "\n" +
+      "Color: " + (colorNames.join(', ') || 'N/A') + "\n" +
+      "Brand: " + (brandName || 'N/A') + "\n\n" +
+      "DESCRIPTION:\n" + (description || 'No description available') + "\n\n" +
+      "--- METADATA FOR REPOST ---\n" +
+      "brand_id: " + (brandId || 'unknown') + "\n" +
+      "catalog_id: " + (catalogId || 'unknown') + "\n" +
+      "size_id: " + (sizeId || 'unknown') + "\n" +
+      "condition_id: " + (conditionId || '3') + "\n" +
+      "color_ids: " + (colorIds.join(',') || '1') + "\n" +
+      "package_size_id: " + packageSizeId;
+    
+    console.log("[27] Info content created, length:", infoContent.length);
+    
+    var messageText = "📦 " + (title || 'Item') + "\n💰 " + price + " €\n📸 " + imageUrls.length + " images\n\n✅ Metadata saved for repost!";
+    alert(messageText);
+    
+    console.log("[28] Returning data to service worker...");
+    
+    return {
+      title: title,
+      price: price,
+      description: description,
+      size: sizeName,
+      condition: conditionName,
+      color: colorNames.join(', '),
+      brand: brandName,
+      images: imageUrls,
+      folderName: folderName,
+      infoContent: infoContent,
+      metadata: metadata,
+      url: url
+    };
+    
+  } catch (error) {
+    console.error("[ERROR] scrapeVintedItem crashed:", error);
+    console.error("[ERROR] Stack trace:", error.stack);
+    alert("Error scraping item: " + error.message);
+    return null;
+  }
 }
-
 // Download files using Chrome API (runs in service worker)
 function downloadAllFiles(itemData) {
   console.log("Starting downloads for folder:", itemData.folderName);
   
-  // 1. Download info.txt
-  console.log("Downloading Description.txt...");
-
-chrome.downloads.download({
-  url: 'data:text/plain;charset=utf-8,' + encodeURIComponent(itemData.infoContent),
-  filename: itemData.folderName + '/Description.txt',
-  saveAs: false,
-  conflictAction: 'uniquify'
-});
+  // 1. Download Description.txt
+  chrome.downloads.download({
+    url: 'data:text/plain;charset=utf-8,' + encodeURIComponent(itemData.infoContent),
+    filename: itemData.folderName + '/Description.txt',
+    saveAs: false,
+    conflictAction: 'uniquify'
+  });
   
-  // 2. Download images with delays
+  // 2. Download metadata.json (NUOVO!)
+  if (itemData.metadata) {
+    const metadataJson = JSON.stringify(itemData.metadata, null, 2);
+    chrome.downloads.download({
+      url: 'data:application/json;charset=utf-8,' + encodeURIComponent(metadataJson),
+      filename: itemData.folderName + '/metadata.json',
+      saveAs: false,
+      conflictAction: 'uniquify'
+    });
+    console.log("✅ metadata.json queued");
+  }
+  
+  // 3. Download images with delays
   if (itemData.images && itemData.images.length > 0) {
     console.log("Queuing", itemData.images.length, "images for download...");
     
     itemData.images.forEach(function(imageUrl, index) {
       setTimeout(function() {
-        var extension = getFileExtension(imageUrl);
-        var filename = itemData.folderName + '/' + 
-                      sanitizeFilename(itemData.title || 'item') + 
-                      '_' + (index + 1) + extension;
+        const extension = getFileExtension(imageUrl);
+        const filename = itemData.folderName + '/' + 
+                        sanitizeFilename(itemData.title || 'item') + 
+                        '_' + (index + 1) + extension;
         
-        console.log("Downloading image", index + 1, "as", filename);
+        // Aggiorna metadata con il nome del file (opzionale)
+        if (itemData.metadata && itemData.metadata.image_filenames) {
+          // Questo verrà fatto in un secondo momento
+        }
         
         chrome.downloads.download({
           url: imageUrl,
@@ -765,11 +975,11 @@ chrome.downloads.download({
             console.log("✅ Image", index + 1, "downloading (ID:", downloadId + ")");
           }
         });
-      }, index * 2000); // 2 second delay between images
+      }, index * 2000);
     });
-    
-    console.log("✅ All downloads queued!");
   }
+  
+  console.log("✅ All downloads queued!");
 }
 
 function getFileExtension(url) {
